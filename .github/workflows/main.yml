@@ -1,0 +1,38 @@
+---
+name: "Validate"
+run-name: >-
+  Dagger build triggerd from `${{ github.event_name }}` to
+  `${{ github.ref_name }}` by `${{ github.actor }}`
+
+on: # yamllint disable-line rule:truthy
+  push:
+
+env:
+  TERRAFORM_ROOT: ${{ github.workspace }}/packages/terraform/
+  TERRAFORM_CHANGED_MODULES: >-
+    $(.cicd/utils/terraform.sh && get_changed_modules)
+  TERRAFORM_CHANGED_ENVIRONMENT_MODULES: >-
+    $(.cicd/utils/terraform.sh get_changed_environments)
+
+jobs:
+  dagger:
+    name: "Run Dagger pipeline"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout"
+        id: actions-checkout
+        uses: actions/checkout@v3
+
+      - name: "Python setup"
+        id: actions-setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: "Install Python dependencies"
+        id: pip-install
+        run: python -m pip install -r .cicd/dagger/requirements.txt
+
+      - name: "Run Dagger pipeline"
+        id: dagger-run
+        run: python .cicd/dagger/terraform/main.py
